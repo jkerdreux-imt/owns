@@ -51,7 +51,7 @@ Important:
 
 
 ## hosts.txt
-The hosts.txt file contains the list of static entries (dnsmasq style), with the following fields: fqdn,ipv4,ipv6, txt 
+The `hosts.txt` file contains the list of static entries (dnsmasq style), with the following fields: fqdn,ipv4,ipv6, txt 
 
 ```
 test0.home,192.168.1.2,2001:666:5555:4444::2,test 00 VM
@@ -71,5 +71,6 @@ OwNS provide a `systemd` unit file and you can enable it as usual with systemd.
  ## TODO
    - Add support for DoT or DoH. 
 
-## Additionnal note
-This is my first real program writen in Golang. 
+## Additionnal notes
+- This is my first real program writen in Golang, so it may contains some error, but I use it as my daily NS for quite a long time now.
+- There is no default zone associated with hosts file. So, if you query a local host which is not in the hosts file, OwNS will forward the query the default servers (DNS leak..)
