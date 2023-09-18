@@ -51,8 +51,8 @@ Important:
 
 
 ## hosts.txt
-The hosts.txt file contains the list of static dnsmasq entries, with the following fields: fqdn,ipv4,ipv6,
-txt 
+The hosts.txt file contains the list of static entries (dnsmasq style), with the following fields: fqdn,ipv4,ipv6, txt 
+
 ```
 test0.home,192.168.1.2,2001:666:5555:4444::2,test 00 VM
 test1.home,192.168.1.3,2001:666:5555:4444::3,test 01 VM
