@@ -73,4 +73,4 @@ OwNS provide a `systemd` unit file and you can enable it as usual with systemd.
 
 ## Additionnal notes
 - This is my first real program writen in Golang, so it may contains some errors, but I use it as my daily NS for quite a long time now.
-- There is no default zone associated with hosts file. So, if you query a local host which is not in the hosts file, OwNS will forward the query the default servers (DNS leak..)
+- There is no default zone associated with hosts file. So, if you query a local host which is not in the hosts file, OwNS will forward the query to the default servers (DNS leak..)
