@@ -68,6 +68,21 @@ OwNS provide a `systemd` unit file and you can enable it as usual with systemd.
  sudo systemctl [start|stop|enable|disable|status] owns
 ```
 
+
+## Command line flags
+```shell
+Usage of owns:
+  -bindAddr string
+        Address to which the server should bind (default "0.0.0.0")
+  -confDir string
+        Configuration directory (default "/etc/owns")
+  -logLevel string
+        Log level (e.g., INFO, DEBUG) (default "INFO")
+  -port int
+        Port on which the server should listen (default 53)
+```
+
+
  ## TODO
    - Add support for DoT or DoH. 
 
