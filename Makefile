@@ -6,7 +6,7 @@ clean:
 
 test:
 	GOOS=linux   GOARCH=amd64 go build -o bin/owns
-	sudo ./bin/owns -confDir ./conf -logLevel DEBUG -port 1053
+	./bin/owns -confDir ./conf -logLevel DEBUG -port 1053
 
 
 binaries:clean
