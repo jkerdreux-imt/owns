@@ -17,4 +17,7 @@ binaries:clean
 	GOOS=darwin  GOARCH=amd64 go build -o bin/owns-darwin
 
 install:
+	cp -r conf/ /etc/owns
+	cp owns.service /usr/lib/systemd/system/owns.service
 	cp bin/owns /usr/local/bin
+	

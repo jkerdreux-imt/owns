@@ -10,7 +10,6 @@
     - 192.44.75.0/24
   domains:
     - imt-atlantique.fr
-
   servers:
     - 192.44.75.10
 
