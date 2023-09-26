@@ -178,7 +178,9 @@ func (fw *Forwarder) getCache(key string) *dns.Msg {
 	if ok && entry.Expiry.After(time.Now()) {
 		response := entry.Response.Copy()
 		ttl := time.Until(entry.Expiry).Seconds()
-		response.Answer[0].Header().Ttl = uint32(ttl)
+		for _, ans := range response.Answer {
+			ans.Header().Ttl = uint32(ttl)
+		}
 		return response
 	}
 	return nil
