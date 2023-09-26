@@ -58,7 +58,7 @@ func runServer(bindAddr string, port int, handler func(dns.ResponseWriter, *dns.
 
 func main() {
 	// Set default values
-	defaultBindAddr := "0.0.0.0"
+	defaultBindAddr := "[::]"
 	defaultPort := 53
 	defaultConfDir := "/etc/owns"
 	defaultLogLevel := "INFO"

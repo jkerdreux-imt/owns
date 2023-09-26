@@ -106,7 +106,7 @@ func (ls *LocalServ) handleRequest(fqdn string, w dns.ResponseWriter, r *dns.Msg
 	response := new(dns.Msg)
 	response.SetReply(r)
 	response.Authoritative = true
-	TTL := 120
+	TTL := 60
 
 	// send A, AAAA, and TXT answer
 	if q.Qtype == dns.TypeA {
@@ -141,7 +141,7 @@ func (ls *LocalServ) handleRRequest(ip net.IP, w dns.ResponseWriter, r *dns.Msg)
 	response := new(dns.Msg)
 	response.SetReply(r)
 	response.Authoritative = true
-	TTL := 120
+	TTL := 60
 
 	// send PTR answer
 	response.Answer = append(response.Answer, &dns.PTR{
