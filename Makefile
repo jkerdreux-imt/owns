@@ -8,7 +8,6 @@ test:
 	GOOS=linux   GOARCH=amd64 go build -o bin/owns-linux64
 	./bin/owns-linux64 -confDir ./conf -logLevel DEBUG -port 1053
 
-
 build:
 	GOOS=linux   GOARCH=amd64 go build -o bin/owns-linux64
 
@@ -23,7 +22,7 @@ install:build
 	cp -r conf/ /etc/owns
 	cp owns.service /usr/lib/systemd/system/owns.service
 	cp bin/owns-linux64 /usr/local/bin/owns
-	
+
 reinstall:build
 	systemctl stop owns
 	cp bin/owns-linux64 /usr/local/bin/owns
