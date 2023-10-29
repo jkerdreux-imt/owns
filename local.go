@@ -11,8 +11,9 @@ import (
 )
 
 type record struct {
-	IPv4, IPv6 net.IP
-	Text       string
+	Text string
+	IPv4 net.IP
+	IPv6 net.IP
 }
 
 type LocalServ struct {

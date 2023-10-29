@@ -14,10 +14,10 @@ import (
 )
 
 type ForwardConfig struct {
+	File     string   `yaml:"file,omitempty"`
 	Networks []string `yaml:"networks"`
 	Servers  []string `yaml:"servers,omitempty"`
 	Domains  []string `yaml:"domains,omitempty"`
-	File     string   `yaml:"file,omitempty"`
 }
 
 type Forward struct {
@@ -26,10 +26,10 @@ type Forward struct {
 }
 
 type Forwarder struct {
-	zones          []Forward
-	cacheMu        sync.RWMutex
 	cache          map[string]CacheEntry
+	zones          []Forward
 	defaultServers []string
+	cacheMu        sync.RWMutex
 }
 
 type CacheEntry struct {
