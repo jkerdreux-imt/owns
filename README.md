@@ -73,7 +73,7 @@ OwNS provide a `systemd` unit file and you can enable it as usual with systemd.
 ```shell
 Usage of owns:
   -bindAddr string
-        Address to which the server should bind (default "0.0.0.0")
+        Address to which the server should bind (default "[::]")
   -confDir string
         Configuration directory (default "/etc/owns")
   -logLevel string
