@@ -50,7 +50,7 @@ If we search for any domain name ending in `.home`, we will only use servers `19
 - Entries with no domains and networks are considered as default servers.
 
 ### UDP/TCP/TLS:
-Servers can use UDP(default), TCP, and TLS (known as DoT or DNS over TLS). Simply specify the scheme in the server list in example:
+Servers can use UDP (default), TCP, and TLS (known as DoT or DNS over TLS). Simply specify the scheme in the server list:
 - 9.9.9.9 => default UDP on port 53
 - udp://9.9.9.9:53 => same as above
 - tcp://9.9.9.9 => TCP on port 53
