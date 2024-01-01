@@ -201,8 +201,9 @@ func (fw *Forwarder) handleCache(w dns.ResponseWriter, r *dns.Msg) bool {
 // improvement => use a channel + goroutine
 func (fw *Forwarder) sendRequest(servers []string, r *dns.Msg) *dns.Msg {
 	for _, serv := range servers {
-		c := new(dns.Client)
-		resp, _, err := c.Exchange(r, "["+serv+"]"+":53")
+		schem, port, addr := extractServer(serv)
+		c := &dns.Client{Net: schem}
+		resp, _, err := c.Exchange(r, "["+addr+"]:"+port)
 		if err != nil {
 			log.Error("Error resolving " + err.Error())
 		} else {
@@ -234,4 +235,27 @@ func (fw *Forwarder) _handleRequest(servers []string, w dns.ResponseWriter, r *d
 	}
 	fw.setCache(r.Question[0].String(), resp)
 	w.WriteMsg(resp)
+}
+
+// return schem, port, address for a given server
+// support udp://, tcp:// and tls:// 
+func extractServer(inputURL string) (string, string, string) {
+	scheme := "udp"
+	port := "53"
+
+	parts := strings.SplitN(inputURL, "://", 2)
+	
+	if len(parts) == 2 {
+		scheme = strings.ToLower(parts[0])
+		if scheme == "tls" {
+			scheme = "tcp-tls"
+			port = "853"
+		}
+	}
+	serverAndPort := parts[len(parts)-1]
+	serverParts := strings.SplitN(serverAndPort, ":", 2)
+	if len(serverParts) == 2 {
+		port = serverParts[1]
+	}
+	return scheme, port, serverParts[0]
 }
