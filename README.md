@@ -50,6 +50,7 @@ Important:
 - Entries with no domains and networks are considered as default servers.
 
 UDP/TCP/TLS:
+
 Servers can use UDP(default), TCP, and TLS (known as DoT or DNS over TLS). Simply specify the scheme in the server list in example:
 - 9.9.9.9 => default UDP on port 53
 - udp://9.9.9.9:53 => same as above
