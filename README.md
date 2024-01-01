@@ -45,12 +45,11 @@ The `forward.yaml` file contains the list of different DNS servers to be used. T
 
 If we search for any domain name ending in `.home`, we will only use servers `192.168.1.254` or `2001:555:4444:3333::254`. Same for reverse lookup: We will use the same servers if you query any IP within networks `192.168.1.0/24` or `2001:555:4444:3333::/64` (cidr notation).
 
-Important:
+### Important:
 - You can use some overlapping in networks, the first one will be used for reverse lookups.
 - Entries with no domains and networks are considered as default servers.
 
-UDP/TCP/TLS:
-
+### UDP/TCP/TLS:
 Servers can use UDP(default), TCP, and TLS (known as DoT or DNS over TLS). Simply specify the scheme in the server list in example:
 - 9.9.9.9 => default UDP on port 53
 - udp://9.9.9.9:53 => same as above
@@ -92,7 +91,7 @@ Usage of owns:
 
 
  ## TODO
-   - Add support for DoT or DoH. 
+   - ~~Add support for DoT~~. 
 
 ## Additionnal notes
 - This is my first real program in Golang, so it may contain some errors, but I use it as my daily NS for quite a long time now.
