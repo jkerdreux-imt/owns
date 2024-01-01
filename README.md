@@ -49,6 +49,13 @@ Important:
 - You can use some overlapping in networks, the first one will be used for reverse lookups.
 - Entries with no domains and networks are considered as default servers.
 
+UDP/TCP/TLS:
+Servers can use UDP(default), TCP, and TLS (known as DoT or DNS over TLS). Simply specify the scheme in the server list in example:
+- 9.9.9.9 => default UDP on port 53
+- udp://9.9.9.9:53 => same as above
+- tcp://9.9.9.9 => TCP on port 53
+- tls://9.9.9.9 => TCP + TLS on port 853
+
 
 ## hosts.txt
 The `hosts.txt` file contains the list of static entries (dnsmasq style), with the following fields: fqdn,ipv4,ipv6, txt 
