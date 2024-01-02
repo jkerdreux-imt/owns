@@ -238,13 +238,13 @@ func (fw *Forwarder) _handleRequest(servers []string, w dns.ResponseWriter, r *d
 }
 
 // return schem, port, address for a given server
-// support udp://, tcp:// and tls:// 
+// support udp://, tcp:// and tls://
 func extractServer(inputURL string) (string, string, string) {
 	scheme := "udp"
 	port := "53"
 
 	parts := strings.SplitN(inputURL, "://", 2)
-	
+
 	if len(parts) == 2 {
 		scheme = strings.ToLower(parts[0])
 		if scheme == "tls" {
