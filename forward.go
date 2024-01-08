@@ -271,7 +271,7 @@ func (fw *Forwarder) sendRequest(servers []Server, r *dns.Msg) *dns.Msg {
 		c := &dns.Client{Net: serv.Scheme}
 		resp, _, err := c.Exchange(r, "["+serv.Addr+"]:"+strconv.Itoa(serv.Port))
 		if err != nil {
-			log.Error("Error resolving " + err.Error())
+			log.Debug("Error resolving " + err.Error())
 		} else {
 			return resp
 		}
