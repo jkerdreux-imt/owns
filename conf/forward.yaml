@@ -1,7 +1,7 @@
 - networks:
     - 10.77.0.0/16
   servers:
-    - 193.50.97.131
+    - udp://193.50.97.131
   domains:
     - enstb.org
 
@@ -11,9 +11,10 @@
   domains:
     - imt-atlantique.fr
   servers:
-    - 192.44.75.10
+    - udp://192.44.75.10
 
 - servers:
-    - tls://9.9.9.9
-    - 8.8.8.8:53
+    - udp://8.8.8.8
+    - tls://[2620:fe::9]
+
 

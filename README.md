@@ -31,8 +31,8 @@ The `forward.yaml` file contains the list of different DNS servers to be used. T
     domains:
         - home
     servers:
-        - 2001:555:4444:3333::254
-        - 192.168.1.254
+        - udp://[2001:555:4444:3333::254]
+        - tls://192.168.1.254
 
   - networks:
         - 10.0.0.0/8
@@ -40,7 +40,7 @@ The `forward.yaml` file contains the list of different DNS servers to be used. T
     domains:
         - imt-atlantique.fr
     servers:
-        - 192.44.75.10
+        - udp://192.44.75.10
 ```
 
 If we search for any domain name ending in `.home`, we will only use servers `192.168.1.254` or `2001:555:4444:3333::254`. Same for reverse lookup: We will use the same servers if you query any IP within networks `192.168.1.0/24` or `2001:555:4444:3333::/64` (cidr notation).
@@ -50,11 +50,9 @@ If we search for any domain name ending in `.home`, we will only use servers `19
 - Entries with no domains and networks are considered as default servers.
 
 ### UDP/TCP/TLS:
-Servers can use UDP (default), TCP, and TLS (known as DoT or DNS over TLS). Simply specify the scheme in the server list:
-- 9.9.9.9 => default UDP on port 53
-- udp://9.9.9.9:53 => same as above
-- tcp://9.9.9.9 => TCP on port 53
-- tls://9.9.9.9 => TCP + TLS on port 853
+Servers can use UDP, TCP, and TLS (known as DoT or DNS over TLS). Specify the scheme in the server list, the format is scheme://IP:port. Supported schemes are `udp://` `tcp://` and `tls://`. IPv6 address must be surrounded with `[_]`, and port is optional.
+
+
 
 
 ## hosts.txt
