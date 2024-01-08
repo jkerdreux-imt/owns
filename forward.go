@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"net"
 	"os"
+	"regexp"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -14,21 +16,27 @@ import (
 )
 
 type ForwardConfig struct {
-	File     string   `yaml:"file,omitempty"`
 	Networks []string `yaml:"networks"`
 	Servers  []string `yaml:"servers,omitempty"`
 	Domains  []string `yaml:"domains,omitempty"`
 }
 
 type Forward struct {
-	Config   ForwardConfig
 	Networks []*net.IPNet
+	Servers  []Server
+	Domains  []string
+}
+
+type Server struct {
+	Scheme string
+	Addr   string
+	Port   int
 }
 
 type Forwarder struct {
 	cache          map[string]CacheEntry
 	zones          []Forward
-	defaultServers []string
+	defaultServers []Server
 	cacheMu        sync.RWMutex
 }
 
@@ -59,31 +67,88 @@ func newForwarder(filename string) *Forwarder {
 
 func (fw *Forwarder) extract(fwConfigs []ForwardConfig) {
 	for _, config := range fwConfigs {
-		var parsedNetworks []*net.IPNet
+		// parsing CIDR Networks
+		var networks []*net.IPNet
 		for _, networkStr := range config.Networks {
 			_, ipNet, err := net.ParseCIDR(networkStr)
 			if err != nil {
 				log.Warningf("Error parsing CIDR: %s\n", err)
 				continue
 			}
-			parsedNetworks = append(parsedNetworks, ipNet)
+			networks = append(networks, ipNet)
 		}
+		// parsing Servers
+		var servers []Server
+		for _, serverStr := range config.Servers {
+			scheme, addr, port, err := extractServerURL(serverStr)
+			if err != nil {
+				log.Warningf("Error parsing Server: %s\n", err)
+				continue
+			}
+			servers = append(servers, Server{scheme, addr, port})
+		}
+
 		zone := Forward{
-			Config:   config,
-			Networks: parsedNetworks,
+			Networks: networks,
+			Domains:  config.Domains,
+			Servers:  servers,
 		}
 		fw.zones = append(fw.zones, zone)
 	}
 }
 
+func extractServerURL(inputURL string) (string, string, int, error) {
+	re := regexp.MustCompile(`^(?P<Scheme>[a-z]+)://(?:\[(?P<IPv6>[0-9a-fA-F:]+)\]|(?P<IPv4>[^:/]+))(?::(?P<Port>\d+))?$`)
+	matches := re.FindStringSubmatch(inputURL)
+
+	if len(matches) == 0 {
+		return "", "", 0, fmt.Errorf("WRONG SERVER FORMAT: %s", inputURL)
+	}
+
+	scheme := strings.ToLower(matches[re.SubexpIndex("Scheme")])
+	ipv6 := matches[re.SubexpIndex("IPv6")]
+	ipv4 := matches[re.SubexpIndex("IPv4")]
+	port := matches[re.SubexpIndex("Port")]
+
+	addr := ipv4
+	if ipv6 != "" {
+		addr = ipv6
+	}
+
+	switch scheme {
+	case "udp", "tcp", "tls":
+	default:
+		return "", "", 0, fmt.Errorf("SERVER SCHEME ERROR: %s://", scheme)
+	}
+
+	finalPort := 53
+	if port == "" {
+		if scheme == "tls" {
+			finalPort = 853
+		}
+	} else {
+		var err error
+		finalPort, err = strconv.Atoi(port)
+		if err != nil {
+			return "", "", 0, fmt.Errorf("SERVER PORT ERROR: %s", port)
+		}
+	}
+
+	if scheme == "tls" {
+		scheme = "tcp-tls"
+	}
+
+	return scheme, addr, finalPort, nil
+}
+
 func (fw *Forwarder) display() {
 	for _, zone := range fw.zones {
-		fmt.Printf("* Servers: %v\n", zone.Config.Servers)
+		fmt.Printf("* Servers: %v\n", zone.Servers)
 		fmt.Printf("  Networks:\n")
 		for _, ipNet := range zone.Networks {
 			fmt.Printf("    %s\n", ipNet.String())
 		}
-		fmt.Printf("  Domains: %v\n", zone.Config.Domains)
+		fmt.Printf("  Domains: %v\n", zone.Domains)
 		fmt.Println()
 	}
 }
@@ -98,11 +163,11 @@ func (fw *Forwarder) info() {
 // =============================================================================
 
 // search servers for a known IP address (v4 or v6)
-func (fw *Forwarder) findServersByIP(ip net.IP) []string {
+func (fw *Forwarder) findServersByIP(ip net.IP) []Server {
 	for _, zone := range fw.zones {
 		for _, ipNet := range zone.Networks {
 			if ipNet.Contains(ip) {
-				return zone.Config.Servers
+				return zone.Servers
 			}
 		}
 	}
@@ -110,16 +175,16 @@ func (fw *Forwarder) findServersByIP(ip net.IP) []string {
 }
 
 // search if it's known domain
-func (fw *Forwarder) findServersByFQDN(fqdn string) []string {
+func (fw *Forwarder) findServersByFQDN(fqdn string) []Server {
 	parts := strings.Split(fqdn, ".")
 	if len(parts) < 2 {
 		log.Errorf("Invalid FQDN format: %s", fqdn)
 		return nil
 	}
 	for _, zone := range fw.zones {
-		for _, domain := range zone.Config.Domains {
+		for _, domain := range zone.Domains {
 			if domain == fqdn || strings.HasSuffix(fqdn, "."+domain) {
-				return zone.Config.Servers
+				return zone.Servers
 			}
 		}
 	}
@@ -127,11 +192,13 @@ func (fw *Forwarder) findServersByFQDN(fqdn string) []string {
 }
 
 // return the default servers
-func (fw *Forwarder) findServersByDefault() []string {
-	var servers []string
+func (fw *Forwarder) findServersByDefault() []Server {
+	var servers []Server
 	for _, zone := range fw.zones {
-		if len(zone.Networks) == 0 && len(zone.Config.Domains) == 0 {
-			servers = append(servers, zone.Config.Servers...)
+		if len(zone.Networks) == 0 && len(zone.Domains) == 0 {
+			// TODO: check if this list is needed, as we should not have more than
+			// one default zone so zone.servers should be enough
+			servers = append(servers, zone.Servers...)
 		}
 	}
 	return servers
@@ -199,11 +266,10 @@ func (fw *Forwarder) handleCache(w dns.ResponseWriter, r *dns.Msg) bool {
 
 // forward request to forwarding servers. The first answer wins
 // improvement => use a channel + goroutine
-func (fw *Forwarder) sendRequest(servers []string, r *dns.Msg) *dns.Msg {
+func (fw *Forwarder) sendRequest(servers []Server, r *dns.Msg) *dns.Msg {
 	for _, serv := range servers {
-		schem, port, addr := extractServer(serv)
-		c := &dns.Client{Net: schem}
-		resp, _, err := c.Exchange(r, "["+addr+"]:"+port)
+		c := &dns.Client{Net: serv.Scheme}
+		resp, _, err := c.Exchange(r, "["+serv.Addr+"]:"+strconv.Itoa(serv.Port))
 		if err != nil {
 			log.Error("Error resolving " + err.Error())
 		} else {
@@ -225,7 +291,7 @@ func (fw *Forwarder) handleRequest(fqdn string, w dns.ResponseWriter, r *dns.Msg
 	fw._handleRequest(tmp, w, r)
 }
 
-func (fw *Forwarder) _handleRequest(servers []string, w dns.ResponseWriter, r *dns.Msg) {
+func (fw *Forwarder) _handleRequest(servers []Server, w dns.ResponseWriter, r *dns.Msg) {
 	if len(servers) == 0 {
 		servers = fw.defaultServers
 	}
@@ -235,27 +301,4 @@ func (fw *Forwarder) _handleRequest(servers []string, w dns.ResponseWriter, r *d
 	}
 	fw.setCache(r.Question[0].String(), resp)
 	w.WriteMsg(resp)
-}
-
-// return schem, port, address for a given server
-// support udp://, tcp:// and tls://
-func extractServer(inputURL string) (string, string, string) {
-	scheme := "udp"
-	port := "53"
-
-	parts := strings.SplitN(inputURL, "://", 2)
-
-	if len(parts) == 2 {
-		scheme = strings.ToLower(parts[0])
-		if scheme == "tls" {
-			scheme = "tcp-tls"
-			port = "853"
-		}
-	}
-	serverAndPort := parts[len(parts)-1]
-	serverParts := strings.SplitN(serverAndPort, ":", 2)
-	if len(serverParts) == 2 {
-		port = serverParts[1]
-	}
-	return scheme, port, serverParts[0]
 }
