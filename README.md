@@ -50,7 +50,7 @@ If we search for any domain name ending in `.home`, we will only use servers `19
 - Entries with no domains and networks are considered as default servers.
 
 ### UDP/TCP/TLS:
-Servers can use UDP, TCP, and TLS (known as DoT or DNS over TLS). Specify the scheme in the server list, the format is scheme://IP:port. Supported schemes are `udp://` `tcp://` and `tls://`. IPv6 address must be surrounded with `[_]`, and port is optional.
+Servers can use UDP, TCP, and TLS (known as DoT or DNS over TLS). Specify the scheme in the server list, the format is `scheme://IP:port`. Supported schemes are `udp://` `tcp://` and `tls://`. IPv6 address must be surrounded with `[_]`, and port is optional.
 
 
 
