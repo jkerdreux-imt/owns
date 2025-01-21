@@ -11,6 +11,9 @@ test:
 build:
 	GOOS=linux   GOARCH=amd64 go build -o bin/owns-linux64
 
+static:
+	CGO_ENABLED=0 go build -o bin/owns-static
+
 binaries:clean
 	GOOS=linux   GOARCH=amd64 go build -o bin/owns-linux64
 	GOOS=linux   GOARCH=arm64 go build -o bin/owns-arm64
