@@ -13,28 +13,14 @@ management, and a simple static hosts file.
 - [Configuration](#configuration)
   - [forward.yaml](#forwardyaml)
   - [hosts.txt](#hoststxt)
-- [Dependencies](#dependencies)
 - [Build & Binaries](#build--binaries)
 - [Usage](#usage)
   - [Command Line Flags](#command-line-flags)
   - [Systemd Integration](#systemd-integration)
+- [Dependencies](#dependencies)
 - [Contributing](#contributing)
 - [Support](#support)
 - [License](#license)
-
----
-
-## Dependencies
-
-OwNS uses the following Go modules:
-
-- **github.com/miekg/dns**: DNS protocol implementation for Go
-- **github.com/sirupsen/logrus**: Structured logging for Go
-- **golang.org/x/mod**: Go module maintenance
-- **golang.org/x/net**: Supplementary networking libraries
-- **golang.org/x/sys**: Low-level OS interface
-- **golang.org/x/tools**: Go tools and utilities
-- **gopkg.in/yaml.v3**: YAML parsing and encoding
 
 ---
 
@@ -136,6 +122,16 @@ A systemd service file is provided:
 ```shell
 sudo systemctl [start|stop|enable|disable|status] owns
 ```
+
+---
+
+## Dependencies
+
+OwNS uses the following Go modules:
+
+- [github.com/miekg/dns](https://github.com/miekg/dns): DNS protocol implementation for Go
+- [github.com/sirupsen/logrus](https://github.com/sirupsen/logrus): Structured logging for Go
+- [gopkg.in/yaml.v3](https://github.com/go-yaml/yaml): YAML parsing and encoding
 
 ---
 
