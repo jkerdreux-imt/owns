@@ -180,8 +180,7 @@ This project is licensed under the [BSD 3-Clause License](./LICENCE).
 ---
 
 ## Additional Notes
-- This is the author's first real Go program, used daily as a personal DNS
-  server.
+- OwNS has been used daily in my personal network configuration since 2023 without issues.
 - Warning: There is no default zone associated with the hosts file. If you query
   a local host not in hosts.txt, OwNS will forward the query to the default
   servers (possible DNS leak).
