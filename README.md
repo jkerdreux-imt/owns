@@ -60,7 +60,10 @@ Default configuration files are located in `/etc/owns/`:
 - `hosts.txt`: Static entries (dnsmasq format)
 
 ### forward.yaml
-Define which DNS servers to use for each domain or network:
+
+The `forward.yaml` file lets you define which DNS servers to use for each
+network or domain. Here is a sample configuration with multiple entries:
+
 ```yaml
 - networks:
     - 192.168.1.0/24
@@ -78,7 +81,29 @@ Define which DNS servers to use for each domain or network:
     - imt-atlantique.fr
   servers:
     - udp://192.44.75.10
+
+- servers:
+    - udp://8.8.8.8
+    - tls://[2620:fe::9]
 ```
+
+#### Part 1: Home network and domain
+This configuration will use the listed servers for any domain ending in `.home`
+or any IP in the specified networks.
+
+#### Part 2: Organization domain and network
+This configuration will use the listed server for any domain ending in
+`.imt-atlantique.fr` or any IP in the specified networks.
+
+#### Part 3: Default servers
+```yaml
+- servers:
+    - udp://8.8.8.8
+    - tls://[2620:fe::9]
+```
+This block defines default servers used for queries that do not match any
+specific network or domain above.
+
 - Networks and domains can overlap: the first match is used.
 - Default servers are those without associated domains/networks.
 - Supported schemes: `udp://`, `tcp://`, `tls://` (DoT).
