@@ -43,19 +43,34 @@ func reverseToIP(normalIP string) net.IP {
 
 // reverse a direct IPv6
 func reverseToIPv6(inverseIP string) net.IP {
-	// Divide the inverse address into segments separated by dots
+	// Split into nibbles
 	segments := strings.Split(inverseIP, ".")
-	// Invert segment order
-	reverseSegments := make([]string, len(segments))
-	for i, j := 0, len(segments)-1; i < len(segments); i, j = i+1, j-1 {
-		reverseSegments[i] = segments[j]
+	if len(segments) > 32 {
+		return nil // an IPv6 reverse record cannot have more than 32 nibbles
 	}
-	// Group segments into hexadecimal quartets
-	groupedSegments := make([]string, 0, len(reverseSegments)/4)
-	for i := 0; i < len(reverseSegments); i += 4 {
-		groupedSegments = append(groupedSegments, reverseSegments[i]+reverseSegments[i+1]+reverseSegments[i+2]+reverseSegments[i+3])
+
+	// Reverse the nibble order
+	for i, j := 0, len(segments)-1; i < j; i, j = i+1, j-1 {
+		segments[i], segments[j] = segments[j], segments[i]
 	}
-	// Join segments into a string with ":" as separator
-	ipv6 := strings.Join(groupedSegments, ":")
-	return net.ParseIP(ipv6)
+
+	// Pad with "0" if someone sent a shortened reverse query
+	if len(segments) < 32 {
+		padding := make([]string, 32-len(segments))
+		for i := range padding {
+			padding[i] = "0"
+		}
+		segments = append(segments, padding...)
+	}
+
+	// Group 4 nibbles into one hex quartet
+	grouped := make([]string, 0, 8)
+	for i := 0; i < 32; i += 4 {
+		grouped = append(grouped, strings.Join(segments[i:i+4], ""))
+	}
+
+	// Rebuild the IPv6 string
+	ipStr := strings.Join(grouped, ":")
+	log.Debugf("reversed %s => %s", inverseIP, ipStr)
+	return net.ParseIP(ipStr)
 }
