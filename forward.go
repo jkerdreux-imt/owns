@@ -176,11 +176,6 @@ func (fw *Forwarder) findServersByIP(ip net.IP) []Server {
 
 // search if it's known domain
 func (fw *Forwarder) findServersByFQDN(fqdn string) []Server {
-	parts := strings.Split(fqdn, ".")
-	if len(parts) < 2 {
-		log.Errorf("Invalid FQDN format: %s", fqdn)
-		return nil
-	}
 	for _, zone := range fw.zones {
 		for _, domain := range zone.Domains {
 			if domain == fqdn || strings.HasSuffix(fqdn, "."+domain) {
