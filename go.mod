@@ -1,4 +1,4 @@
-module jkx/owns
+module github.com/jkerdreux-imt/owns
 
 go 1.21.0
 
