@@ -35,9 +35,12 @@ management, and a simple static hosts file.
 
 ## Installation
 
-### Prerequisites
-- Go >= 1.18
-- make
+### Using go install (recommended)
+```shell
+go install github.com/jkerdreux-imt/owns@latest
+```
+
+This will install the latest version of `owns` to your `$GOPATH/bin` directory.
 
 ### From source
 ```shell
@@ -46,6 +49,10 @@ cd owns
 make
 sudo make install
 ```
+
+**Prerequisites:**
+- Go >= 1.18
+- make
 
 ### Binaries
 Precompiled binaries for various platforms (Linux, Darwin, NetBSD, Windows,
