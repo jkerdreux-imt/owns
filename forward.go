@@ -262,9 +262,15 @@ func (fw *Forwarder) handleCache(w dns.ResponseWriter, r *dns.Msg) bool {
 // forward request to forwarding servers. The first answer wins
 // improvement => use a channel + goroutine
 func (fw *Forwarder) sendRequest(servers []Server, r *dns.Msg) *dns.Msg {
+	query := r.Copy()
+	if opt := query.IsEdns0(); opt != nil {
+		opt.SetDo()
+	} else {
+		query.SetEdns0(4096, true)
+	}
 	for _, serv := range servers {
 		c := &dns.Client{Net: serv.Scheme}
-		resp, _, err := c.Exchange(r, "["+serv.Addr+"]:"+strconv.Itoa(serv.Port))
+		resp, _, err := c.Exchange(query, "["+serv.Addr+"]:"+strconv.Itoa(serv.Port))
 		if err != nil {
 			log.Debug("Error resolving " + err.Error())
 		} else {
