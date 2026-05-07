@@ -288,11 +288,8 @@ func (fw *Forwarder) handleRRequest(ip net.IP, w dns.ResponseWriter, r *dns.Msg)
 
 // handle direct request
 func (fw *Forwarder) handleRequest(fqdn string, w dns.ResponseWriter, r *dns.Msg) {
-	var servers []Server
-	if r.Question[0].Qtype != dns.TypeDS {
-		servers = fw.findServersByFQDN(fqdn)
-	}
-	fw._handleRequest(servers, w, r)
+	tmp := fw.findServersByFQDN(fqdn)
+	fw._handleRequest(tmp, w, r)
 }
 
 func (fw *Forwarder) _handleRequest(servers []Server, w dns.ResponseWriter, r *dns.Msg) {
@@ -302,6 +299,16 @@ func (fw *Forwarder) _handleRequest(servers []Server, w dns.ResponseWriter, r *d
 	resp := fw.sendRequest(servers, r)
 	if resp == nil {
 		return
+	}
+	// DS queries need a recursive resolver (DS lives in parent zone).
+	// If the zone server is authoritative-only (ra=0), fall back to
+	// default servers which are assumed to support recursion.
+	if r.Question[0].Qtype == dns.TypeDS && !resp.MsgHdr.RecursionAvailable {
+		if fallback := fw.sendRequest(fw.defaultServers, r); fallback != nil {
+			fw.setCache(r.Question[0].String(), fallback)
+			w.WriteMsg(fallback)
+			return
+		}
 	}
 	fw.setCache(r.Question[0].String(), resp)
 	w.WriteMsg(resp)
