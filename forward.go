@@ -288,8 +288,11 @@ func (fw *Forwarder) handleRRequest(ip net.IP, w dns.ResponseWriter, r *dns.Msg)
 
 // handle direct request
 func (fw *Forwarder) handleRequest(fqdn string, w dns.ResponseWriter, r *dns.Msg) {
-	tmp := fw.findServersByFQDN(fqdn)
-	fw._handleRequest(tmp, w, r)
+	var servers []Server
+	if r.Question[0].Qtype != dns.TypeDS {
+		servers = fw.findServersByFQDN(fqdn)
+	}
+	fw._handleRequest(servers, w, r)
 }
 
 func (fw *Forwarder) _handleRequest(servers []Server, w dns.ResponseWriter, r *dns.Msg) {
