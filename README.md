@@ -120,12 +120,12 @@ specific network or domain above.
 OwNS always requests DNSSEC records from upstream servers (EDNS0 DO bit is
 forced). This ensures signed responses are cached and returned to clients.
 
-When a zone-specific server is an **authoritative-only** server (no recursion),
-DNSSEC validation by the client can fail. This is because the `DS` record lives
-in the parent zone (e.g. `enstb.org DS` is in the `.org` zone), not on the
-authoritative server. To handle this, **`DS` queries are always routed to the
-default recursive servers** instead of zone-specific servers, regardless of
-domain matching.
+`DS` queries require a recursive resolver because the DS record lives in the
+**parent zone** (e.g. `enstb.org DS` is in `.org`, not on `enstb.org`'s
+authoritative server). When the zone server does not support recursion
+(`ra=0`), OwNS automatically falls back to the default recursive servers for
+that DS query only, preserving the response from the zone server in all other
+cases.
 
 ### hosts.txt
 Static entries:
