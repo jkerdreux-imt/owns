@@ -115,6 +115,18 @@ specific network or domain above.
 - Default servers are those without associated domains/networks.
 - Supported schemes: `udp://`, `tcp://`, `tls://` (DoT).
 
+#### DNSSEC
+
+OwNS always requests DNSSEC records from upstream servers (EDNS0 DO bit is
+forced). This ensures signed responses are cached and returned to clients.
+
+When a zone-specific server is an **authoritative-only** server (no recursion),
+DNSSEC validation by the client can fail. This is because the `DS` record lives
+in the parent zone (e.g. `enstb.org DS` is in the `.org` zone), not on the
+authoritative server. To handle this, **`DS` queries are always routed to the
+default recursive servers** instead of zone-specific servers, regardless of
+domain matching.
+
 ### hosts.txt
 Static entries:
 ```
