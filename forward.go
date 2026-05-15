@@ -33,13 +33,94 @@ type Server struct {
 	Port   int
 }
 
+// ConnPool manages a small pool of persistent TCP/TLS connections per address.
+// Only one goroutine uses a connection at a time; idle connections are returned
+// to the pool for reuse.
+type ConnPool struct {
+	mu    sync.Mutex
+	cond  *sync.Cond
+	max   int
+	idle  map[string][]*dns.Conn // idle connections, ready for reuse
+	total map[string]int         // total connections (idle + in-use) per address
+}
+
+func newConnPool(maxPerServer int) *ConnPool {
+	p := &ConnPool{
+		max:   maxPerServer,
+		idle:  make(map[string][]*dns.Conn),
+		total: make(map[string]int),
+	}
+	p.cond = sync.NewCond(&p.mu)
+	return p
+}
+
+// getConn returns an idle connection, dials a new one if under max,
+// or returns nil, nil if pool is saturated and timeout expired (caller should fallback).
+func (p *ConnPool) getConn(c *dns.Client, addr string, timeout time.Duration) (*dns.Conn, error) {
+	deadline := time.Now().Add(timeout)
+
+	p.mu.Lock()
+	defer p.mu.Unlock()
+
+	for {
+		// 1. Try to grab an idle connection
+		if conns, ok := p.idle[addr]; ok && len(conns) > 0 {
+			last := len(conns) - 1
+			conn := conns[last]
+			p.idle[addr] = conns[:last]
+			log.Debugf("tcp pool: reuse connection %s (idle=%d, total=%d)",
+				addr, len(p.idle[addr]), p.total[addr])
+			return conn, nil
+		}
+
+		// 2. Under max → dial a new one
+		if p.total[addr] < p.max {
+			p.total[addr]++
+			p.mu.Unlock() // release during dial (can be slow)
+
+			log.Debugf("tcp pool: dial new connection %s (total=%d/%d)", addr, p.total[addr]-1, p.max)
+			conn, err := c.Dial(addr)
+
+			p.mu.Lock() // reacquire for deferred unlock
+			if err != nil {
+				p.total[addr]--
+				return nil, err
+			}
+			return conn, nil
+		}
+
+		// 3. Pool saturated — wait for a connection to be returned
+		if timeout == 0 || time.Now().After(deadline) {
+			return nil, nil // signal: pool full, caller should fall back
+		}
+
+		p.cond.Wait() // releases mu, waits for Signal, reacquires mu
+	}
+}
+
+// putConn returns a healthy connection to the idle pool.
+func (p *ConnPool) putConn(addr string, conn *dns.Conn) {
+	p.mu.Lock()
+	p.idle[addr] = append(p.idle[addr], conn)
+	p.mu.Unlock()
+	p.cond.Signal() // wake one waiter
+}
+
+// discardConn removes a dead/broken connection from the count.
+// Caller is responsible for conn.Close().
+func (p *ConnPool) discardConn(addr string) {
+	p.mu.Lock()
+	p.total[addr]--
+	p.mu.Unlock()
+	p.cond.Signal() // a slot freed up
+}
+
 type Forwarder struct {
 	cache          map[string]CacheEntry
 	zones          []Forward
 	defaultServers []Server
 	cacheMu        sync.RWMutex
-	tcpConns       map[string]*dns.Conn
-	tcpConnsMu     sync.Mutex
+	connPool       *ConnPool
 }
 
 type CacheEntry struct {
@@ -50,7 +131,7 @@ type CacheEntry struct {
 func newForwarder(filename string) *Forwarder {
 	fw := new(Forwarder)
 	fw.cache = map[string]CacheEntry{}
-	fw.tcpConns = map[string]*dns.Conn{}
+	fw.connPool = newConnPool(4)
 
 	data, err := os.ReadFile(filename)
 	if err != nil {
@@ -293,49 +374,51 @@ func (fw *Forwarder) sendRequest(servers []Server, r *dns.Msg) *dns.Msg {
 	return nil
 }
 
-// exchange sends a query over a pooled TCP/TLS connection.
-// Dials a new connection if none available, retries once on idle timeout.
-func (fw *Forwarder) exchange(c *dns.Client, addr string, query *dns.Msg) (*dns.Msg, error) {
-	dial := func() (*dns.Conn, error) {
-		conn, err := c.Dial(addr)
-		if err == nil {
-			fw.tcpConns[addr] = conn
-		}
-		fw.tcpConnsMu.Unlock()
-		return conn, err
-	}
+const poolWaitTimeout = 100 * time.Millisecond
 
-	fw.tcpConnsMu.Lock()
-	conn, ok := fw.tcpConns[addr]
-	if !ok || conn.Conn == nil {
-		var err error
-		log.Debugf("tcp pool: dial new connection %s", addr)
-		conn, err = dial()
-		if err != nil {
-			return nil, err
-		}
-	} else {
-		log.Debugf("tcp pool: reuse connection %s", addr)
-		fw.tcpConnsMu.Unlock()
+// exchange sends a query over a pooled TCP/TLS connection.
+// Connections are taken from the pool (exclusive use), returned if healthy,
+// discarded if broken. On pool saturation, waits briefly then reports failure
+// so sendRequest can fall back to the next server.
+func (fw *Forwarder) exchange(c *dns.Client, addr string, query *dns.Msg) (*dns.Msg, error) {
+	conn, err := fw.connPool.getConn(c, addr, poolWaitTimeout)
+	if err != nil {
+		return nil, err // dial failed
+	}
+	if conn == nil {
+		return nil, fmt.Errorf("pool saturated for %s", addr)
 	}
 
 	resp, _, err := c.ExchangeWithConn(query, conn)
 	if err == nil {
+		// Healthy → return to pool for reuse
+		fw.connPool.putConn(addr, conn)
 		return resp, nil
 	}
 
-	// dead connection → retry on the same server
-	log.Debugf("tcp pool: dead connection %s, retrying", addr)
-	fw.tcpConnsMu.Lock()
-	delete(fw.tcpConns, addr)
+	// Dead/broken connection
+	log.Debugf("tcp pool: dead connection %s, discarding", addr)
+	fw.connPool.discardConn(addr)
 	conn.Close()
-	conn, err = dial()
+
+	// One retry with a fresh connection (no wait — if pool is full, give up)
+	conn, err = fw.connPool.getConn(c, addr, 0)
 	if err != nil {
 		return nil, err
 	}
+	if conn == nil {
+		return nil, fmt.Errorf("pool saturated for %s", addr)
+	}
 
 	resp, _, err = c.ExchangeWithConn(query, conn)
-	return resp, err
+	if err == nil {
+		fw.connPool.putConn(addr, conn)
+		return resp, nil
+	}
+
+	fw.connPool.discardConn(addr)
+	conn.Close()
+	return nil, err
 }
 
 // handle reverse request
