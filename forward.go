@@ -38,6 +38,8 @@ type Forwarder struct {
 	zones          []Forward
 	defaultServers []Server
 	cacheMu        sync.RWMutex
+	tcpConns       map[string]*dns.Conn
+	tcpConnsMu     sync.Mutex
 }
 
 type CacheEntry struct {
@@ -48,6 +50,7 @@ type CacheEntry struct {
 func newForwarder(filename string) *Forwarder {
 	fw := new(Forwarder)
 	fw.cache = map[string]CacheEntry{}
+	fw.tcpConns = map[string]*dns.Conn{}
 
 	data, err := os.ReadFile(filename)
 	if err != nil {
@@ -260,7 +263,6 @@ func (fw *Forwarder) handleCache(w dns.ResponseWriter, r *dns.Msg) bool {
 }
 
 // forward request to forwarding servers. The first answer wins
-// improvement => use a channel + goroutine
 func (fw *Forwarder) sendRequest(servers []Server, r *dns.Msg) *dns.Msg {
 	query := r.Copy()
 	if opt := query.IsEdns0(); opt != nil {
@@ -270,14 +272,70 @@ func (fw *Forwarder) sendRequest(servers []Server, r *dns.Msg) *dns.Msg {
 	}
 	for _, serv := range servers {
 		c := &dns.Client{Net: serv.Scheme}
-		resp, _, err := c.Exchange(query, "["+serv.Addr+"]:"+strconv.Itoa(serv.Port))
-		if err != nil {
-			log.Debug("Error resolving " + err.Error())
-		} else {
+		addr := "[" + serv.Addr + "]:" + strconv.Itoa(serv.Port)
+
+		// TCP/TLS → connexion persistante
+		if strings.HasPrefix(serv.Scheme, "tcp") {
+			resp, err := fw.exchange(c, addr, query)
+			if err != nil {
+				continue
+			}
 			return resp
 		}
+
+		// UDP → Exchange normal
+		resp, _, err := c.Exchange(query, addr)
+		if err != nil {
+			continue
+		}
+		return resp
 	}
 	return nil
+}
+
+// exchange sends a query over a pooled TCP/TLS connection.
+// Dials a new connection if none available, retries once on idle timeout.
+func (fw *Forwarder) exchange(c *dns.Client, addr string, query *dns.Msg) (*dns.Msg, error) {
+	dial := func() (*dns.Conn, error) {
+		conn, err := c.Dial(addr)
+		if err == nil {
+			fw.tcpConns[addr] = conn
+		}
+		fw.tcpConnsMu.Unlock()
+		return conn, err
+	}
+
+	fw.tcpConnsMu.Lock()
+	conn, ok := fw.tcpConns[addr]
+	if !ok || conn.Conn == nil {
+		var err error
+		log.Debugf("tcp pool: dial new connection %s", addr)
+		conn, err = dial()
+		if err != nil {
+			return nil, err
+		}
+	} else {
+		log.Debugf("tcp pool: reuse connection %s", addr)
+		fw.tcpConnsMu.Unlock()
+	}
+
+	resp, _, err := c.ExchangeWithConn(query, conn)
+	if err == nil {
+		return resp, nil
+	}
+
+	// dead connection → retry on the same server
+	log.Debugf("tcp pool: dead connection %s, retrying", addr)
+	fw.tcpConnsMu.Lock()
+	delete(fw.tcpConns, addr)
+	conn.Close()
+	conn, err = dial()
+	if err != nil {
+		return nil, err
+	}
+
+	resp, _, err = c.ExchangeWithConn(query, conn)
+	return resp, err
 }
 
 // handle reverse request

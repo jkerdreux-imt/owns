@@ -84,6 +84,11 @@ func main() {
 		log.Fatalf("Invalid log level: %s", logLevel)
 	}
 
+	log.SetFormatter(&log.TextFormatter{
+		TimestampFormat: "15:04:05.000",
+		FullTimestamp:   true,
+	})
+
 	forward := newForwarder(confDir + "/forward.yaml")
 	forward.info()
 	local := newLocalServer(confDir + "/hosts.txt")
