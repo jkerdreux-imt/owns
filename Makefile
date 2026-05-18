@@ -27,7 +27,7 @@ install:build
 	cp bin/owns-linux64 /usr/local/bin/owns
 
 reinstall:build
-	systemctl stop owns
-	cp bin/owns-linux64 /usr/local/bin/owns
-	systemctl start owns
-	systemctl status owns
+	sudo systemctl stop owns
+	sudo cp bin/owns-linux64 /usr/local/bin/owns
+	sudo systemctl start owns
+	sudo systemctl status owns
