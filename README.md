@@ -29,6 +29,7 @@ management, and a simple static hosts file.
 - **Custom DNS servers** per domain or network slice
 - **Static hosts file** (dnsmasq-style format)
 - **UDP, TCP, TLS (DoT) support**
+- **TCP/TLS connection pooling** (persistent connections per upstream server)
 - **Flexible configuration via YAML and hosts.txt**
 
 ---
@@ -126,6 +127,14 @@ authoritative server). When the zone server does not support recursion
 (`ra=0`), OwNS automatically falls back to the default recursive servers for
 that DS query only, preserving the response from the zone server in all other
 cases.
+
+#### TCP/TLS Connection Pool
+
+OwNS maintains a pool of persistent connections to each upstream TCP/TLS server
+(up to 4 per server). Connections are reused across queries to avoid the
+overhead of repeated handshakes. When the pool is saturated, OwNS waits
+briefly (100ms) then falls back to the next configured server. Broken
+connections are automatically discarded and replaced on demand.
 
 ### hosts.txt
 Static entries:
