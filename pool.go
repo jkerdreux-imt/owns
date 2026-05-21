@@ -52,9 +52,10 @@ func (p *ConnPool) getConn(c *dns.Client, addr string, timeout time.Duration) (*
 		// 2. Under max → dial a new one
 		if p.total[addr] < defaultMaxPerServer {
 			p.total[addr]++
+			currentTotal := p.total[addr]
 			p.mu.Unlock() // release during dial (can be slow)
 
-			log.Debugf("tcp pool: dial new connection %s (total=%d/%d)", addr, p.total[addr]-1, defaultMaxPerServer)
+			log.Debugf("tcp pool: dial new connection %s (total=%d/%d)", addr, currentTotal-1, defaultMaxPerServer)
 			conn, err := c.Dial(addr)
 
 			p.mu.Lock() // reacquire for deferred unlock
