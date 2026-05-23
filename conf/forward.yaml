@@ -1,20 +1,47 @@
-- networks:
-    - 10.77.0.0/16
-  servers:
-    - udp://193.50.97.131
-  domains:
-    - enstb.org
+# ============================================================
+# OwNS forward configuration
+# ============================================================
+# Zone structure:
+#   - networks : internal IP ranges (CIDR v4 or v6)
+#   - domains  : domain names that should route through these servers
+#   - servers  : upstream DNS servers (udp://, tcp://, tls://)
+#
+# Block without networks/domains = default servers (fallback)
+#
+# Networks and domains can overlap: the first matching block wins
+# (evaluated in file order).
+# ============================================================
 
+# Vacation home — accessed through a VPN link
+- networks:
+    - 192.168.2.0/24
+    - 2001:db8:2222::/48
+  domains:
+    - cottage
+  servers:
+    - udp://192.168.2.1
+    - tls://[2001:db8:2222::1]
+
+# Corporate network — broad range
 - networks:
     - 10.0.0.0/8
-    - 192.44.75.0/24
   domains:
-    - imt-atlantique.fr
+    - corporate.net
   servers:
-    - udp://192.44.75.10
+    - udp://10.0.0.1
 
+# Sub-division — narrower range overlapping corporate
+# For 10.77.x.x, this zone wins over the broader corporate range.
+# Example: a machine in 10.77.x.x querying .internal.corporate.net
+# is resolved via the dedicated DNS at 10.77.0.1, not via 10.0.0.1
+- networks:
+    - 10.77.0.0/16
+  domains:
+    - internal.corporate.net
+  servers:
+    - udp://10.77.0.1
+
+# Default servers — anything not matching the zones above
 - servers:
-    - udp://8.8.8.8
+    - tls://9.9.9.9
     - tls://[2620:fe::9]
-
-
