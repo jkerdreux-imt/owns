@@ -227,7 +227,7 @@ func (fw *Forwarder) setCache(key string, resp *dns.Msg) {
 	if len(resp.Answer) != 0 {
 		fw.cacheMu.Lock()
 		fw.cache[key] = CacheEntry{
-			Response: resp.Copy(),
+			Response: resp,
 			Expiry:   time.Now().Add(time.Duration(resp.Answer[0].Header().Ttl) * time.Second),
 		}
 		fw.cacheMu.Unlock()
@@ -362,18 +362,10 @@ func (fw *Forwarder) _handleRequest(servers []Server, w dns.ResponseWriter, r *d
 	// default servers which are assumed to support recursion.
 	if r.Question[0].Qtype == dns.TypeDS && !resp.MsgHdr.RecursionAvailable {
 		if fallback := fw.sendRequest(fw.defaultServers, r); fallback != nil {
-			if fallback.Len() > 1232 {
-				fallback.Truncate(1232)
-			}
 			fw.setCache(r.Question[0].String(), fallback)
 			w.WriteMsg(fallback)
 			return
 		}
-	}
-	// Truncate explicitly to avoid corruption when WriteMsg packs
-	// a large DNSSEC response into a small UDP buffer.
-	if resp.Len() > 1232 {
-		resp.Truncate(1232)
 	}
 	fw.setCache(r.Question[0].String(), resp)
 	w.WriteMsg(resp)
