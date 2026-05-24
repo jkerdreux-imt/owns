@@ -365,11 +365,38 @@ func (fw *Forwarder) _handleRequest(servers []Server, w dns.ResponseWriter, r *d
 	// default servers which are assumed to support recursion.
 	if r.Question[0].Qtype == dns.TypeDS && !resp.MsgHdr.RecursionAvailable {
 		if fallback := fw.sendRequest(fw.defaultServers, r); fallback != nil {
+			truncateToFit(fallback, r)
 			fw.setCache(requestKey(r), fallback)
 			w.WriteMsg(fallback)
 			return
 		}
 	}
+	truncateToFit(resp, r)
 	fw.setCache(requestKey(r), resp)
 	w.WriteMsg(resp)
+}
+
+// truncateToFit ensures the DNS response fits within the client's UDP buffer,
+// as advertised in the original request's EDNS0 OPT record.
+// On TLS upstreams, the EDNS0 UDPSize is not enforced, so we must
+// truncate here before writing back over UDP.
+func truncateToFit(resp *dns.Msg, r *dns.Msg) {
+	limit := dns.MinMsgSize
+	if opt := r.IsEdns0(); opt != nil {
+		sz := int(opt.UDPSize())
+		if sz > limit {
+			limit = sz
+		}
+	}
+	if limit > 1232 {
+		limit = 1232 // DNS Flag Day 2020: avoid IP fragmentation
+	}
+
+	packed, err := resp.Pack()
+	if err != nil {
+		return
+	}
+	if len(packed) > limit {
+		resp.Truncate(limit)
+	}
 }
