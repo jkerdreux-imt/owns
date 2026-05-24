@@ -1,0 +1,8 @@
+.git/
+.gitignore
+bin/
+owns
+tests/
+bench.sh
+*.md
+LICENCE

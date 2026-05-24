@@ -1,0 +1,7 @@
+services:
+  owns:
+    build: .
+    network_mode: host
+    volumes:
+      - ./conf:/etc/owns
+    restart: unless-stopped
