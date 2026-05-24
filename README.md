@@ -116,11 +116,6 @@ specific network or domain above.
 - Default servers are those without associated domains/networks.
 - Supported schemes: `udp://`, `tcp://`, `tls://` (DoT).
 
-#### DNSSEC
-
-OwNS always requests DNSSEC records from upstream servers (EDNS0 DO bit is
-forced). This ensures signed responses are cached and returned to clients.
-
 `DS` queries require a recursive resolver because the DS record lives in the
 **parent zone** (e.g. `enstb.org DS` is in `.org`, not on `enstb.org`'s
 authoritative server). When the zone server does not support recursion
