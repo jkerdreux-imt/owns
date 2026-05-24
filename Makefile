@@ -8,9 +8,11 @@ test:
 	GOOS=linux   GOARCH=amd64 go build -o bin/owns-linux64
 	./bin/owns-linux64 -confDir ./conf -logLevel DEBUG -port 1053
 
-docker-test:
+docker-build:
 	docker build -t owns .
-	docker run --rm --network host -v ./conf/:/etc/owns/ owns
+
+docker-test: docker-build
+	docker run --rm --network host -v ./conf/:/etc/owns/ owns -logLevel DEBUG
 
 build:
 	GOOS=linux   GOARCH=amd64 go build -o bin/owns-linux64

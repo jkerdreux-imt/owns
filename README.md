@@ -14,6 +14,7 @@ management, and a simple static hosts file.
   - [forward.yaml](#forwardyaml)
   - [hosts.txt](#hoststxt)
 - [Build & Binaries](#build--binaries)
+- [Docker](#docker)
 - [Usage](#usage)
   - [Command Line Flags](#command-line-flags)
   - [Systemd Integration](#systemd-integration)
@@ -150,6 +151,41 @@ make
 ```
 This will generate binaries in the `bin/` directory for development or custom builds.
 For official releases and precompiled binaries, visit the [GitHub Releases](https://github.com/jkerdreux-imt/owns/releases) page.
+
+---
+
+## Docker
+
+### Building the image
+```shell
+make docker-build
+# or directly:
+docker build -t owns .
+```
+
+### Running with docker-compose (recommended)
+The provided `docker-compose.yml` uses `network_mode: host` and mounts the
+`./conf/` directory for live configuration:
+
+```shell
+docker compose up -d
+docker compose logs -f
+```
+
+### Quick test with plain Docker
+```shell
+make docker-test
+# or directly:
+docker run --rm --network host -v ./conf/:/etc/owns/ owns
+```
+
+By default the container binds to `127.0.0.1:53/udp` only. Use custom flags to
+override:
+
+```shell
+docker run --rm --network host -v ./conf/:/etc/owns/ owns \
+  -bindAddr 192.168.1.10 -logLevel DEBUG
+```
 
 ---
 
