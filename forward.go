@@ -250,13 +250,14 @@ func (fw *Forwarder) getCache(key string) *dns.Msg {
 	return nil
 }
 
-// requestKey returns a cache key for the given DNS request.
-// The request ID is zeroed so transactional differences don't affect the key.
+// requestKey returns a stable cache key for the given DNS request.
+// Only query-relevant fields are included: name, type, class, and
+// the DNSSEC DO / CD flags. Transient fields (ID, EDNS0 cookie,
+// padding) are intentionally excluded.
 func requestKey(r *dns.Msg) string {
-	c := r.Copy()
-	c.Id = 0
-	wire, _ := c.Pack()
-	return fmt.Sprintf("%x", wire)
+	q := r.Question[0]
+	do := r.IsEdns0() != nil && r.IsEdns0().Do()
+	return fmt.Sprintf("%s %d %d|do=%t|cd=%t", q.Name, q.Qtype, q.Qclass, do, r.CheckingDisabled)
 }
 
 func (fw *Forwarder) handleCache(w dns.ResponseWriter, r *dns.Msg) bool {
