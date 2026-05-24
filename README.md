@@ -74,40 +74,43 @@ The `forward.yaml` file lets you define which DNS servers to use for each
 network or domain. Here is a sample configuration with multiple entries:
 
 ```yaml
-- networks:
-    - 192.168.1.0/24
-    - 2001:555:4444:3333::/64
-  domains:
-    - home
-  servers:
-    - udp://[2001:555:4444:3333::254]
-    - tls://192.168.1.254
 
+# Vacation home — accessed through a VPN link
+- networks:
+    - 192.168.2.0/24
+    - 2001:db8:2222::/48
+  domains:
+    - cottage
+  servers:
+    - udp://192.168.2.1
+    - tls://[2001:db8:2222::1]
+
+# Corporate network — broad range
 - networks:
     - 10.0.0.0/8
-    - 192.44.75.0/24
   domains:
-    - imt-atlantique.fr
+    - corporate.net
   servers:
-    - udp://192.44.75.10
+    - udp://10.0.0.1
 
+# Default servers — anything not matching the zones above
 - servers:
-    - udp://8.8.8.8
+    - tls://9.9.9.9
     - tls://[2620:fe::9]
 ```
 
-#### Part 1: Home network and domain
-This configuration will use the listed servers for any domain ending in `.home`
+#### Part 1: Remote home network and domain
+This configuration will use the listed servers for any domain ending in `.cottage`
 or any IP in the specified networks.
 
 #### Part 2: Organization domain and network
 This configuration will use the listed server for any domain ending in
-`.imt-atlantique.fr` or any IP in the specified networks.
+`.corporate.net` or any IP in the specified networks.
 
 #### Part 3: Default servers
 ```yaml
 - servers:
-    - udp://8.8.8.8
+    - tls://9.9.9.9
     - tls://[2620:fe::9]
 ```
 This block defines default servers used for queries that do not match any

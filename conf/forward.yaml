@@ -22,14 +22,6 @@
     - udp://192.168.2.1
     - tls://[2001:db8:2222::1]
 
-# Corporate network — broad range
-- networks:
-    - 10.0.0.0/8
-  domains:
-    - corporate.net
-  servers:
-    - udp://10.0.0.1
-
 # Sub-division — narrower range overlapping corporate
 # For 10.77.x.x, this zone wins over the broader corporate range.
 # Example: a machine in 10.77.x.x querying .internal.corporate.net
@@ -40,6 +32,14 @@
     - internal.corporate.net
   servers:
     - udp://10.77.0.1
+
+# Corporate network — broad range
+- networks:
+    - 10.0.0.0/8
+  domains:
+    - corporate.net
+  servers:
+    - udp://10.0.0.1
 
 # Default servers — anything not matching the zones above
 - servers:
