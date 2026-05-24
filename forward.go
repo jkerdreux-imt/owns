@@ -208,7 +208,7 @@ func (fw *Forwarder) findServersByDefault() []Server {
 // Loop forever to find expired cache
 func (fw *Forwarder) cleanExpiredCacheEntries() {
 	for {
-		time.Sleep(1 * time.Minute)
+		time.Sleep(cacheCleanupInterval)
 
 		fw.cacheMu.Lock()
 		now := time.Now()

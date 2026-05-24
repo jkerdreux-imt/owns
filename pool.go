@@ -8,8 +8,6 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-const defaultMaxPerServer = 4
-const poolWaitTimeout = 100 * time.Millisecond
 
 // ConnPool manages a small pool of persistent TCP/TLS connections per address.
 // Only one goroutine uses a connection at a time; idle connections are returned

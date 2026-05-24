@@ -107,22 +107,21 @@ func (ls *LocalServ) handleRequest(fqdn string, w dns.ResponseWriter, r *dns.Msg
 	response := new(dns.Msg)
 	response.SetReply(r)
 	response.Authoritative = true
-	TTL := 60
 
 	// send A, AAAA, and TXT answer
 	if q.Qtype == dns.TypeA {
 		response.Answer = append(response.Answer, &dns.A{
-			Hdr: dns.RR_Header{Name: q.Name, Rrtype: dns.TypeA, Class: dns.ClassINET, Ttl: uint32(TTL)},
+			Hdr: dns.RR_Header{Name: q.Name, Rrtype: dns.TypeA, Class: dns.ClassINET, Ttl: uint32(defaultLocalTTL)},
 			A:   rec.IPv4,
 		})
 	} else if q.Qtype == dns.TypeAAAA && rec.IPv6 != nil {
 		response.Answer = append(response.Answer, &dns.AAAA{
-			Hdr:  dns.RR_Header{Name: q.Name, Rrtype: dns.TypeAAAA, Class: dns.ClassINET, Ttl: uint32(TTL)},
+			Hdr:  dns.RR_Header{Name: q.Name, Rrtype: dns.TypeAAAA, Class: dns.ClassINET, Ttl: uint32(defaultLocalTTL)},
 			AAAA: rec.IPv6,
 		})
 	} else if q.Qtype == dns.TypeTXT && rec.Text != "" {
 		response.Answer = append(response.Answer, &dns.TXT{
-			Hdr: dns.RR_Header{Name: q.Name, Rrtype: dns.TypeTXT, Class: dns.ClassINET, Ttl: uint32(TTL)},
+			Hdr: dns.RR_Header{Name: q.Name, Rrtype: dns.TypeTXT, Class: dns.ClassINET, Ttl: uint32(defaultLocalTTL)},
 			Txt: []string{rec.Text},
 		})
 	}
@@ -142,11 +141,10 @@ func (ls *LocalServ) handleRRequest(ip net.IP, w dns.ResponseWriter, r *dns.Msg)
 	response := new(dns.Msg)
 	response.SetReply(r)
 	response.Authoritative = true
-	TTL := 60
 
 	// send PTR answer
 	response.Answer = append(response.Answer, &dns.PTR{
-		Hdr: dns.RR_Header{Name: q.Name, Rrtype: dns.TypePTR, Class: dns.ClassINET, Ttl: uint32(TTL)},
+		Hdr: dns.RR_Header{Name: q.Name, Rrtype: dns.TypePTR, Class: dns.ClassINET, Ttl: uint32(defaultLocalTTL)},
 		Ptr: fqdn + ".",
 	})
 
