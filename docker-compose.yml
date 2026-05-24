@@ -1,6 +1,6 @@
 services:
   owns:
-    build: .
+    image: ghcr.io/jkerdreux-imt/owns:latest
     network_mode: host
     volumes:
       - ./conf:/etc/owns

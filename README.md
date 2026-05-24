@@ -159,6 +159,11 @@ For official releases and precompiled binaries, visit the [GitHub Releases](http
 
 ## Docker
 
+### Using the pre-built image
+```shell
+docker pull ghcr.io/jkerdreux-imt/owns:latest
+```
+
 ### Building the image
 ```shell
 make docker-build
@@ -176,9 +181,18 @@ docker compose logs -f
 ```
 
 ### Quick test with plain Docker
+
+**Using the pre-built image:**
+```shell
+docker run --rm --network host -v ./conf/:/etc/owns/ \
+  ghcr.io/jkerdreux-imt/owns:latest
+```
+
+**Or build and run locally:**
 ```shell
 make docker-test
-# or directly:
+# equivalent to:
+docker build -t owns .
 docker run --rm --network host -v ./conf/:/etc/owns/ owns
 ```
 
@@ -186,8 +200,8 @@ By default the container binds to `127.0.0.1:53/udp` only. Use custom flags to
 override:
 
 ```shell
-docker run --rm --network host -v ./conf/:/etc/owns/ owns \
-  -bindAddr 192.168.1.10 -logLevel DEBUG
+docker run --rm --network host -v ./conf/:/etc/owns/ \
+  ghcr.io/jkerdreux-imt/owns:latest -logLevel DEBUG
 ```
 
 ---
