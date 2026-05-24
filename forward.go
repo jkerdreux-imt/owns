@@ -227,7 +227,7 @@ func (fw *Forwarder) setCache(key string, resp *dns.Msg) {
 	if len(resp.Answer) != 0 {
 		fw.cacheMu.Lock()
 		fw.cache[key] = CacheEntry{
-			Response: resp,
+			Response: resp.Copy(),
 			Expiry:   time.Now().Add(time.Duration(resp.Answer[0].Header().Ttl) * time.Second),
 		}
 		fw.cacheMu.Unlock()
