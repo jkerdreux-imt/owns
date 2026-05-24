@@ -388,9 +388,6 @@ func truncateToFit(resp *dns.Msg, r *dns.Msg) {
 			limit = sz
 		}
 	}
-	if limit > 1232 {
-		limit = 1232 // DNS Flag Day 2020: avoid IP fragmentation
-	}
 
 	packed, err := resp.Pack()
 	if err != nil {
