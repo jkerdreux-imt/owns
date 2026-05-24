@@ -250,9 +250,17 @@ func (fw *Forwarder) getCache(key string) *dns.Msg {
 	return nil
 }
 
+// requestKey returns a cache key for the given DNS request.
+// The request ID is zeroed so transactional differences don't affect the key.
+func requestKey(r *dns.Msg) string {
+	c := r.Copy()
+	c.Id = 0
+	wire, _ := c.Pack()
+	return fmt.Sprintf("%x", wire)
+}
+
 func (fw *Forwarder) handleCache(w dns.ResponseWriter, r *dns.Msg) bool {
-	// is it in cache ?
-	response := fw.getCache(r.Question[0].String())
+	response := fw.getCache(requestKey(r))
 	if response != nil {
 		response.Id = r.Id
 		w.WriteMsg(response)
@@ -264,11 +272,6 @@ func (fw *Forwarder) handleCache(w dns.ResponseWriter, r *dns.Msg) bool {
 // forward request to forwarding servers. The first answer wins
 func (fw *Forwarder) sendRequest(servers []Server, r *dns.Msg) *dns.Msg {
 	query := r.Copy()
-	if opt := query.IsEdns0(); opt != nil {
-		opt.SetDo()
-	} else {
-		query.SetEdns0(4096, true)
-	}
 	for _, serv := range servers {
 		c := &dns.Client{Net: serv.Scheme}
 		addr := "[" + serv.Addr + "]:" + strconv.Itoa(serv.Port)
@@ -362,11 +365,11 @@ func (fw *Forwarder) _handleRequest(servers []Server, w dns.ResponseWriter, r *d
 	// default servers which are assumed to support recursion.
 	if r.Question[0].Qtype == dns.TypeDS && !resp.MsgHdr.RecursionAvailable {
 		if fallback := fw.sendRequest(fw.defaultServers, r); fallback != nil {
-			fw.setCache(r.Question[0].String(), fallback)
+			fw.setCache(requestKey(r), fallback)
 			w.WriteMsg(fallback)
 			return
 		}
 	}
-	fw.setCache(r.Question[0].String(), resp)
+	fw.setCache(requestKey(r), resp)
 	w.WriteMsg(resp)
 }
