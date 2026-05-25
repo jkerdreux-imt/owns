@@ -38,6 +38,7 @@
     - 10.0.0.0/8
   domains:
     - corporate.net
+    - corporate.com
   servers:
     - udp://10.0.0.1
 
