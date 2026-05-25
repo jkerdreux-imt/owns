@@ -90,6 +90,7 @@ network or domain. Here is a sample configuration with multiple entries:
     - 10.0.0.0/8
   domains:
     - corporate.net
+    - corporate.com
   servers:
     - udp://10.0.0.1
 
