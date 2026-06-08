@@ -197,7 +197,7 @@ docker build -t owns .
 docker run --rm --network host -v ./conf/:/etc/owns/ owns
 ```
 
-By default the container binds to `127.0.0.1:53/udp` only. Use custom flags to
+By default the container binds to `127.0.0.1:53` (UDP+TCP). Use custom flags to
 override:
 
 ```shell

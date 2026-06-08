@@ -12,5 +12,6 @@ FROM alpine:3.21
 RUN apk add --no-cache ca-certificates
 COPY --from=builder /owns /usr/local/bin/owns
 EXPOSE 53/udp
+EXPOSE 53/tcp
 ENTRYPOINT ["owns"]
 CMD ["-bindAddr", "127.0.0.1", "-confDir", "/etc/owns", "-port", "53", "-logLevel", "INFO"]
