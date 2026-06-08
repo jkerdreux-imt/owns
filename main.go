@@ -42,17 +42,28 @@ func requestHandler(local *LocalServ, fw *Forwarder) func(dns.ResponseWriter, *d
 // server
 func runServer(bindAddr string, port int, handler func(dns.ResponseWriter, *dns.Msg)) {
 	log.Infof("Owns NS (dns lib version " + dns.Version.String() + ")")
-	server := &dns.Server{Addr: bindAddr + ":" + strconv.Itoa(port), Net: "udp"}
+	addr := bindAddr + ":" + strconv.Itoa(port)
 	dns.HandleFunc(".", handler)
 
+	// UDP
+	udpServer := &dns.Server{Addr: addr, Net: "udp"}
 	go func() {
-		if err := server.ListenAndServe(); err != nil {
-			log.Fatalf("Failed to start DNS server: %s\n", err.Error())
+		if err := udpServer.ListenAndServe(); err != nil {
+			log.Fatalf("Failed to start UDP server: %s\n", err.Error())
 		}
 	}()
-	defer server.Shutdown()
+	defer udpServer.Shutdown()
 
-	log.Infof("DNS server listening on port %d", port)
+	// TCP
+	tcpServer := &dns.Server{Addr: addr, Net: "tcp"}
+	go func() {
+		if err := tcpServer.ListenAndServe(); err != nil {
+			log.Fatalf("Failed to start TCP server: %s\n", err.Error())
+		}
+	}()
+	defer tcpServer.Shutdown()
+
+	log.Infof("DNS server listening on port %d (UDP+TCP)", port)
 	select {}
 }
 
