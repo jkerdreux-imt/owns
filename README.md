@@ -9,15 +9,18 @@ management, and a simple static hosts file.
 
 ## Table of Contents
 - [Features](#features)
-- [Installation](#installation)
 - [Configuration](#configuration)
   - [forward.yaml](#forwardyaml)
   - [hosts.txt](#hoststxt)
-- [Build & Binaries](#build--binaries)
-- [Docker](#docker)
 - [Usage](#usage)
   - [Command Line Flags](#command-line-flags)
   - [Systemd Integration](#systemd-integration)
+- [Installation](#installation)
+  - [Go](#go)
+  - [From source](#from-source)
+  - [Binaries](#binaries)
+  - [AUR](#aur-arch-linux--manjaro)
+  - [Docker](#docker)
 - [Dependencies](#dependencies)
 - [Contributing](#contributing)
 - [Support](#support)
@@ -26,39 +29,12 @@ management, and a simple static hosts file.
 ---
 
 ## Features
-- **Recursion & cache** (like dnsmasq)
+- **Recursion & cache** (like dnsmasq) — respects upstream TTL
 - **Custom DNS servers** per domain or network slice
 - **Static hosts file** (dnsmasq-style format)
 - **UDP, TCP, TLS (DoT) support**
 - **TCP/TLS connection pooling** (persistent connections per upstream server)
 - **Flexible configuration via YAML and hosts.txt**
-
----
-
-## Installation
-
-### Using go install (recommended)
-```shell
-go install github.com/jkerdreux-imt/owns@latest
-```
-
-This will install the latest version of `owns` to your `$GOPATH/bin` directory.
-
-### From source
-```shell
-git clone https://github.com/jkerdreux-imt/owns.git
-cd owns
-make
-sudo make install
-```
-
-**Prerequisites:**
-- Go >= 1.18
-- make
-
-### Binaries
-Precompiled binaries for various platforms (Linux, Darwin, NetBSD, Windows,
-ARM64) are available in the [GitHub Releases](https://github.com/jkerdreux-imt/owns/releases).
 
 ---
 
@@ -71,7 +47,12 @@ Default configuration files are located in `/etc/owns/`:
 ### forward.yaml
 
 The `forward.yaml` file lets you define which DNS servers to use for each
-network or domain. Here is a sample configuration with multiple entries:
+network or domain.
+
+> 💡 A minimal setup with only default TLS servers acts as a simple DoT
+> forwarder — like Stubby — encrypting all your DNS traffic.
+
+Here is a sample configuration with multiple entries:
 
 ```yaml
 
@@ -137,73 +118,14 @@ briefly (100ms) then falls back to the next configured server. Broken
 connections are automatically discarded and replaced on demand.
 
 ### hosts.txt
-Static entries:
+Static entries in `name,ipv4,ipv6,comment` format. ipv6 and comment are
+optional:
 ```
 test0.home,192.168.1.2,2001:666:5555:4444::2,test 00 VM
 test1.home,192.168.1.3,2001:666:5555:4444::3,test 01 VM
 test2.home,192.168.1.4,,test 02 VM
 ```
-- The ipv6 and txt fields are optional.
-
----
-
-## Build & Binaries
-
-To build manually from source:
-```shell
-make
-```
-This will generate binaries in the `bin/` directory for development or custom builds.
-For official releases and precompiled binaries, visit the [GitHub Releases](https://github.com/jkerdreux-imt/owns/releases) page.
-
----
-
-## Docker
-
-### Using the pre-built image
-```shell
-docker pull ghcr.io/jkerdreux-imt/owns:latest
-```
-
-### Building the image
-```shell
-make docker-build
-# or directly:
-docker build -t owns .
-```
-
-### Running with docker-compose (recommended)
-The provided `docker-compose.yml` uses `network_mode: host` and mounts the
-`./conf/` directory for live configuration:
-
-```shell
-docker compose up -d
-docker compose logs -f
-```
-
-### Quick test with plain Docker
-
-**Using the pre-built image:**
-```shell
-docker run --rm --network host -v ./conf/:/etc/owns/ \
-  ghcr.io/jkerdreux-imt/owns:latest
-```
-
-**Or build and run locally:**
-```shell
-make docker-test
-# equivalent to:
-docker build -t owns .
-docker run --rm --network host -v ./conf/:/etc/owns/ owns
-```
-
-By default the container binds to `127.0.0.1:53` (UDP+TCP). Use custom flags to
-override:
-
-```shell
-docker run --rm --network host -v ./conf/:/etc/owns/ \
-  ghcr.io/jkerdreux-imt/owns:latest -logLevel DEBUG
-```
+Hosts entries are served with a fixed TTL of 60 seconds.
 
 ---
 
@@ -223,6 +145,89 @@ owns -bindAddr "[::]" -confDir "/etc/owns" -logLevel "INFO" -port 53
 A systemd service file is provided:
 ```shell
 sudo systemctl [start|stop|enable|disable|status] owns
+```
+
+---
+
+## Installation
+
+### Go
+```shell
+go install github.com/jkerdreux-imt/owns@latest
+```
+
+Installs the latest version to `$GOPATH/bin`. Requires Go >= 1.18.
+
+### From source
+```shell
+git clone https://github.com/jkerdreux-imt/owns.git
+cd owns
+make
+sudo make install
+```
+
+**Prerequisites:** Go >= 1.18, make
+
+### Binaries
+Precompiled binaries for various platforms (Linux, Darwin, NetBSD, Windows,
+ARM64) are available on the [GitHub Releases](https://github.com/jkerdreux-imt/owns/releases) page.
+
+### AUR (Arch Linux / Manjaro)
+```shell
+yay -S owns
+# or
+pamac build owns
+```
+
+Then enable the service:
+```shell
+sudo systemctl enable --now owns
+```
+
+Configuration files are in `/etc/owns/`.
+
+### Docker
+
+**Using the pre-built image:**
+```shell
+docker pull ghcr.io/jkerdreux-imt/owns:latest
+```
+
+**Building the image:**
+```shell
+make docker-build
+# or directly:
+docker build -t owns .
+```
+
+**Running with docker-compose (recommended):**
+
+The provided `docker-compose.yml` uses `network_mode: host` and mounts the
+`./conf/` directory for live configuration:
+
+```shell
+docker compose up -d
+docker compose logs -f
+```
+
+**Quick test with plain Docker:**
+
+```shell
+docker run --rm --network host -v ./conf/:/etc/owns/ \
+  ghcr.io/jkerdreux-imt/owns:latest
+```
+
+Or build and run locally:
+```shell
+make docker-test
+```
+
+By default the container binds to `127.0.0.1:53` (UDP+TCP). Use custom flags to
+override:
+
+```shell
+docker run --rm --network host -v ./conf/:/etc/owns/ \
+  ghcr.io/jkerdreux-imt/owns:latest -logLevel DEBUG
 ```
 
 ---
