@@ -279,8 +279,8 @@ one VPN, not three simultaneously. `systemd-resolved` needed.
 
 `systemd-resolved` solves per-interface DNS and could handle multi-VPN setups -
 if all VPN interfaces are local. This is not my usage. I run VPN clients
-in containers, so systemd-resolved is not an option. In fact, systemd never will
-be an option.
+in containers, so systemd-resolved is not an option. In fact, systemd will
+never be an option.
 OwNS works regardless: it matches by IP prefix and uses the host routing table.
 
 Also: no systemd, no dbus dependency.
@@ -299,10 +299,6 @@ For _forward_ lookups, both work. Specific limitations:
   requires octet-aligned reverse zones (`/8`, `/16`, `/24`). Arbitrary
   CIDR prefixes like `10.64.0.0/13` or `10.72.0.0/14` have no clean
   `.arpa` mapping and become unmanageable.
-
-OwNS matches reverse lookups the same way as forward: by IP prefix -
-any prefix - in the same YAML block. DoT is built-in. TCP/TLS connections
-are pooled and reused across queries.
 
 Additionally, when an upstream sets `RA=0` (authoritative-only), most
 resolvers return SERVFAIL for DNSSEC DS queries.
