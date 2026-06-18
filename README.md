@@ -310,7 +310,7 @@ resolvers return SERVFAIL for DNSSEC DS queries.
 | Forward per domain        | ✅      | ✅      | ✅               | ✅   |
 | Reverse per prefix        | ✅      | ❌      | ✅               | ✅   |
 | DoT upstream              | ❌      | ✅      | ✅               | ✅   |
-| TCP/TLS pooling           | ❌      | ✅      | ✅               | ✅   |
+| TCP/TLS pooling           | ❌      | ✅      | ❌               | ✅   |
 | DS fallback (RA=0)        | ❌      | ✅      | ❌               | ✅   |
 | Hosts file integrated     | ✅      | NA      | NA               | ✅   |
 | No systemd required       | ✅      | ✅      | ❌               | ✅   |
