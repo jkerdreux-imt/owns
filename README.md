@@ -280,8 +280,9 @@ one VPN, not three simultaneously. `systemd-resolved` needed.
 `systemd-resolved` solves per-interface DNS and could handle multi-VPN setups -
 if all VPN interfaces are local. This is not my usage. I run VPN clients
 in containers, so systemd-resolved is not an option. In fact, systemd will
-never be an option.
+never be an option. Due to lack of TLS pooling, you will experience slow TLS.
 OwNS works regardless: it matches by IP prefix and uses the host routing table.
+
 
 Also: no systemd, no dbus dependency.
 
