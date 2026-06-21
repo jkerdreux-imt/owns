@@ -41,7 +41,7 @@ func requestHandler(local *LocalServ, fw *Forwarder) func(dns.ResponseWriter, *d
 
 // server
 func runServer(bindAddr string, port int, handler func(dns.ResponseWriter, *dns.Msg)) {
-	log.Infof("Owns NS (dns lib version " + dns.Version.String() + ")")
+	log.Infof("Owns NS (dns lib version %s)", dns.Version.String())
 	addr := bindAddr + ":" + strconv.Itoa(port)
 	dns.HandleFunc(".", handler)
 
