@@ -44,5 +44,6 @@
 
 # Default servers — anything not matching the zones above
 - servers:
-    - tls://9.9.9.9
-    - tls://[2620:fe::9]
+    - https://9.9.9.9/dns-query
+    - https://1.1.1.1/dns-query
+    - https://94.140.14.14/dns-query

@@ -1,8 +1,11 @@
 package main
 
 import (
+	"bytes"
 	"fmt"
+	"io"
 	"net"
+	"net/http"
 	"os"
 	"regexp"
 	"strconv"
@@ -38,7 +41,7 @@ type Forwarder struct {
 	zones          []Forward
 	defaultServers []Server
 	cacheMu        sync.RWMutex
-	connPool       *ConnPool
+	httpClient     *http.Client
 }
 
 type CacheEntry struct {
@@ -49,7 +52,13 @@ type CacheEntry struct {
 func newForwarder(filename string) *Forwarder {
 	fw := new(Forwarder)
 	fw.cache = map[string]CacheEntry{}
-	fw.connPool = newConnPool()
+	fw.httpClient = &http.Client{
+		Transport: &http.Transport{
+			ForceAttemptHTTP2: true,
+			IdleConnTimeout:   90 * time.Second,
+		},
+		Timeout: dohTimeout,
+	}
 
 	data, err := os.ReadFile(filename)
 	if err != nil {
@@ -100,6 +109,11 @@ func (fw *Forwarder) extract(fwConfigs []ForwardConfig) {
 }
 
 func extractServerURL(inputURL string) (string, string, int, error) {
+	// DoH: store full URL as-is (skip regex — URLs have paths)
+	if strings.HasPrefix(inputURL, "https://") {
+		return "https", inputURL, 443, nil
+	}
+
 	re := regexp.MustCompile(`^(?P<Scheme>[a-z]+)://(?:\[(?P<IPv6>[0-9a-fA-F:]+)\]|(?P<IPv4>[^:/]+))(?::(?P<Port>\d+))?$`)
 	matches := re.FindStringSubmatch(inputURL)
 
@@ -276,19 +290,19 @@ func (fw *Forwarder) handleCache(w dns.ResponseWriter, r *dns.Msg) bool {
 func (fw *Forwarder) sendRequest(servers []Server, r *dns.Msg) *dns.Msg {
 	query := r.Copy()
 	for _, serv := range servers {
-		c := &dns.Client{Net: serv.Scheme}
-		addr := "[" + serv.Addr + "]:" + strconv.Itoa(serv.Port)
-
-		// TCP/TLS → connexion persistante
-		if strings.HasPrefix(serv.Scheme, "tcp") {
-			resp, err := fw.exchange(c, addr, query)
+		// DoH → HTTP POST
+		if serv.Scheme == "https" {
+			resp, err := fw.dohExchange(serv.Addr, query)
 			if err != nil {
+				log.Debugf("doh exchange failed: %v", err)
 				continue
 			}
 			return resp
 		}
 
-		// UDP → Exchange normal
+		c := &dns.Client{Net: serv.Scheme}
+		addr := "[" + serv.Addr + "]:" + strconv.Itoa(serv.Port)
+
 		resp, _, err := c.Exchange(query, addr)
 		if err != nil {
 			continue
@@ -298,49 +312,42 @@ func (fw *Forwarder) sendRequest(servers []Server, r *dns.Msg) *dns.Msg {
 	return nil
 }
 
-// exchange sends a query over a pooled TCP/TLS connection.
-// Connections are taken from the pool (exclusive use), returned if healthy,
-// discarded if broken. On pool saturation, waits briefly then reports failure
-// so sendRequest can fall back to the next server.
-func (fw *Forwarder) exchange(c *dns.Client, addr string, query *dns.Msg) (*dns.Msg, error) {
-	conn, err := fw.connPool.getConn(c, addr, poolWaitTimeout)
+// dohExchange sends a DNS query via DNS-over-HTTPS (RFC 8484).
+// Uses the shared http.Client for HTTP/2 connection pooling.
+func (fw *Forwarder) dohExchange(url string, query *dns.Msg) (*dns.Msg, error) {
+	wire, err := query.Pack()
 	if err != nil {
-		return nil, err // dial failed
-	}
-	if conn == nil {
-		return nil, fmt.Errorf("pool saturated for %s", addr)
+		return nil, fmt.Errorf("pack: %w", err)
 	}
 
-	resp, _, err := c.ExchangeWithConn(query, conn)
-	if err == nil {
-		// Healthy → return to pool for reuse
-		fw.connPool.putConn(addr, conn)
-		return resp, nil
-	}
-
-	// Dead/broken connection
-	log.Debugf("tcp pool: dead connection %s, discarding", addr)
-	fw.connPool.discardConn(addr)
-	conn.Close()
-
-	// One retry with a fresh connection (no wait — if pool is full, give up)
-	conn, err = fw.connPool.getConn(c, addr, 0)
+	req, err := http.NewRequest("POST", url, bytes.NewReader(wire))
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("new request: %w", err)
 	}
-	if conn == nil {
-		return nil, fmt.Errorf("pool saturated for %s", addr)
+	req.Header.Set("Content-Type", "application/dns-message")
+	req.Header.Set("Accept", "application/dns-message")
+
+	resp, err := fw.httpClient.Do(req)
+	if err != nil {
+		return nil, fmt.Errorf("do: %w", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("http status %d", resp.StatusCode)
 	}
 
-	resp, _, err = c.ExchangeWithConn(query, conn)
-	if err == nil {
-		fw.connPool.putConn(addr, conn)
-		return resp, nil
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, fmt.Errorf("read body: %w", err)
 	}
 
-	fw.connPool.discardConn(addr)
-	conn.Close()
-	return nil, err
+	msg := new(dns.Msg)
+	if err := msg.Unpack(body); err != nil {
+		return nil, fmt.Errorf("unpack: %w", err)
+	}
+
+	return msg, nil
 }
 
 // handle reverse request

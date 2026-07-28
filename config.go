@@ -16,14 +16,9 @@ const (
 	defaultLocalTTL = 60
 )
 
-// ── Connection pool ──
+// ── DoH client ──
 
 const (
-	// defaultMaxPerServer is the maximum number of persistent TCP/TLS
-	// connections kept idle per upstream server.
-	defaultMaxPerServer = 4
-
-	// poolWaitTimeout is how long a goroutine waits for an idle connection
-	// when the pool is saturated before falling back to the next server.
-	poolWaitTimeout = 100 * time.Millisecond
+	// dohTimeout is the HTTP client timeout for DoH queries.
+	dohTimeout = 5 * time.Second
 )
