@@ -223,7 +223,8 @@ func (fw *Forwarder) cleanExpiredCacheEntries() {
 }
 
 // put an response in cache and set the Expiry to Now() + TTL
-func (fw *Forwarder) setCache(key string, resp *dns.Msg) {
+func (fw *Forwarder) setCache(req *dns.Msg, resp *dns.Msg) {
+	key := requestKey(req)
 	if len(resp.Answer) != 0 {
 		fw.cacheMu.Lock()
 		fw.cache[key] = CacheEntry{
@@ -235,9 +236,10 @@ func (fw *Forwarder) setCache(key string, resp *dns.Msg) {
 }
 
 // get a response (Copy) from Cache and update the TTL
-func (fw *Forwarder) getCache(key string) *dns.Msg {
+func (fw *Forwarder) getCache(req *dns.Msg) *dns.Msg {
 	defer fw.cacheMu.RUnlock()
 	fw.cacheMu.RLock()
+	key := requestKey(req)
 	entry, ok := fw.cache[key]
 	if ok && entry.Expiry.After(time.Now()) {
 		response := entry.Response.Copy()
@@ -261,7 +263,7 @@ func requestKey(r *dns.Msg) string {
 }
 
 func (fw *Forwarder) handleCache(w dns.ResponseWriter, r *dns.Msg) bool {
-	response := fw.getCache(requestKey(r))
+	response := fw.getCache(r)
 	if response != nil {
 		response.Id = r.Id
 		w.WriteMsg(response)
@@ -367,13 +369,13 @@ func (fw *Forwarder) _handleRequest(servers []Server, w dns.ResponseWriter, r *d
 	if r.Question[0].Qtype == dns.TypeDS && !resp.MsgHdr.RecursionAvailable {
 		if fallback := fw.sendRequest(fw.defaultServers, r); fallback != nil {
 			truncateToFit(fallback, r)
-			fw.setCache(requestKey(r), fallback)
+			fw.setCache(r, fallback)
 			w.WriteMsg(fallback)
 			return
 		}
 	}
 	truncateToFit(resp, r)
-	fw.setCache(requestKey(r), resp)
+	fw.setCache(r, resp)
 	w.WriteMsg(resp)
 }
 
