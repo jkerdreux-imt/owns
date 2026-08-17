@@ -109,7 +109,7 @@ func (ls *LocalServ) handleRequest(fqdn string, w dns.ResponseWriter, r *dns.Msg
 	response.Authoritative = true
 
 	// send A, AAAA, and TXT answer
-	if q.Qtype == dns.TypeA {
+	if q.Qtype == dns.TypeA && rec.IPv4 != nil {
 		response.Answer = append(response.Answer, &dns.A{
 			Hdr: dns.RR_Header{Name: q.Name, Rrtype: dns.TypeA, Class: dns.ClassINET, Ttl: uint32(defaultLocalTTL)},
 			A:   rec.IPv4,

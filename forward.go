@@ -370,11 +370,15 @@ func (fw *Forwarder) _handleRequest(servers []Server, w dns.ResponseWriter, r *d
 	if resp == nil {
 		return
 	}
+	// The client matches responses by query ID. DoH upstreams may answer
+	// with ID=0 (RFC 8484), so restore the client's ID before replying.
+	resp.Id = r.Id
 	// DS queries need a recursive resolver (DS lives in parent zone).
 	// If the zone server is authoritative-only (ra=0), fall back to
 	// default servers which are assumed to support recursion.
 	if r.Question[0].Qtype == dns.TypeDS && !resp.MsgHdr.RecursionAvailable {
 		if fallback := fw.sendRequest(fw.defaultServers, r); fallback != nil {
+			fallback.Id = r.Id
 			truncateToFit(fallback, r)
 			fw.setCache(r, fallback)
 			w.WriteMsg(fallback)
